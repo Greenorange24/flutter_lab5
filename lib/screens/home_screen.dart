@@ -1,92 +1,116 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final dynamic user; // รับ User object จากหน้า Login
 
   const HomeScreen({super.key, this.user});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  Future<void> _openProfile() async {
+    final result = await Navigator.pushNamed(context, '/profile');
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('อัปเดตข้อมูลเรียบร้อย')));
+      setState(() {}); // รีเฟรชหากต้องการอัปเดต UI
+    }
+  }
+
+  String _avatarText() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args.isNotEmpty) return args[0].toUpperCase();
+    if (args is Map &&
+        args['name'] is String &&
+        (args['name'] as String).isNotEmpty)
+      return (args['name'] as String)[0].toUpperCase();
+    return 'P';
+  }
+
+  @override
   Widget build(BuildContext context) {
     // ดึงข้อมูลจาก User object
-    final userName = user is User ? user.name : 'Guest';
-    final userEmail = user is User ? user.email : 'No email';
+    final userName = widget.user is User ? widget.user.name : 'Guest';
+    final userEmail = widget.user is User ? widget.user.email : 'No email';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('หน้าหลัก'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        automaticallyImplyLeading: false, // ซ่อนปุ่มย้อนกลับ
+        title: const Text('Home'),
         actions: [
-          // ปุ่ม Logout
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context),
+            tooltip: 'โปรไฟล์',
+            onPressed: _openProfile,
+            icon: CircleAvatar(child: Text(_avatarText())),
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Avatar
-              const CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.indigo,
-                child: Icon(Icons.person, size: 60, color: Colors.white),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: ListTile(
+              leading: CircleAvatar(child: Text(_avatarText())),
+              title: const Text('บัญชีของฉัน'),
+              subtitle: const Text('แก้ไขข้อมูลส่วนตัว'),
+              trailing: TextButton(
+                onPressed: _openProfile,
+                child: const Text('แก้ไข'),
               ),
-              const SizedBox(height: 24),
-
-              // แสดงข้อมูล User
-              Text(
-                'ยินดีต้อนรับ!',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-
-              // Card แสดงข้อมูล
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.person, color: Colors.indigo),
-                        title: const Text('ชื่อ'),
-                        subtitle: Text(userName),
-                      ),
-                      const Divider(),
-                      ListTile(
-                        leading: const Icon(Icons.email, color: Colors.indigo),
-                        title: const Text('อีเมล'),
-                        subtitle: Text(userEmail),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // ปุ่ม Logout
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showLogoutDialog(context),
-                  icon: const Icon(Icons.logout),
-                  label: const Text('ออกจากระบบ'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                  ),
-                ),
-              ),
-            ],
+              onTap: _openProfile,
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+
+          // แสดงข้อมูล User
+          Text(
+            'ยินดีต้อนรับ!',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+
+          // Card แสดงข้อมูล
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.person, color: Colors.indigo),
+                    title: const Text('ชื่อ'),
+                    subtitle: Text(userName),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.email, color: Colors.indigo),
+                    title: const Text('อีเมล'),
+                    subtitle: Text(userEmail),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // ปุ่ม Logout
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showLogoutDialog(context),
+              icon: const Icon(Icons.logout),
+              label: const Text('ออกจากระบบ'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -182,55 +206,27 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('แก้ไขข้อมูลส่วนตัว')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode
-              .onUserInteraction, // validate แบบ real-time ขณะพิมพ์
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'ชื่อ'),
-                textInputAction: TextInputAction.next,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'กรุณาใส่ชื่อ' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emailCtrl,
-                decoration: const InputDecoration(labelText: 'อีเมล'),
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                validator: _emailValidator,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(labelText: 'เบอร์โทรศัพท์'),
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.done,
-                validator: _phoneValidator,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('บันทึก'),
-              ),
-            ],
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            tooltip: 'โปรไฟล์',
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
           ),
-        ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // ...existing widgets...
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('แก้ไขข้อมูลส่วนตัว'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pushNamed(context, '/profile'),
+          ),
+        ],
       ),
     );
   }
