@@ -15,6 +15,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _rememberMe = false; // State สำหรับ Remember Me
+  bool _isLoading = false; // State สำหรับ Loading
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return 'กรุณากรอกอีเมล';
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) return 'รูปแบบอีเมลไม่ถูกต้อง';
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'กรุณากรอกรหัสผ่าน';
+    if (value.length < 6) return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+    return null;
+  }
 
   @override
   void dispose() {
@@ -23,36 +37,30 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      // สร้าง User object
-      final user = User(
-        name: _emailController.text.split(
-          '@',
-        )[0], // ใช้ส่วนแรกของ email เป็นชื่อ
-        email: _emailController.text,
-      );
+      setState(() => _isLoading = true);
+      try {
+        final user = User(
+          name: _emailController.text.split('@')[0],
+          email: _emailController.text,
+        );
 
-      // แสดงข้อมูล Remember Me (สำหรับ demo)
-      debugPrint('Remember Me: $_rememberMe');
+        debugPrint('Remember Me: $_rememberMe');
 
-      // Navigation ไปหน้า Home พร้อมส่ง User object
-      // แบบที่ 1: ใช้ Navigator.push (ไม่ใช้ Named Route)
-      /*
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(user: user),
-        ),
-      );
-      */
+        // Simulate delay for demo (or call real API)
+        await Future.delayed(const Duration(seconds: 1));
 
-      // แบบที่ 2: ใช้ Named Route พร้อม arguments
-      Navigator.pushReplacementNamed(
-        context,
-        '/home',
-        arguments: user, // ส่ง User object ไปด้วย
-      );
+        Navigator.pushReplacementNamed(context, '/home', arguments: user);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -67,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.always, // validate แบบ real-time
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -80,15 +89,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'อีเมล',
-                  prefixIcon: Icon(Icons.email),
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'กรุณากรอกอีเมล';
-                  }
-                  return null;
-                },
+                validator: _validateEmail,
               ),
               const SizedBox(height: 16),
 
@@ -98,27 +101,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'รหัสผ่าน',
-                  prefixIcon: const Icon(Icons.lock),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'กรุณากรอกรหัสผ่าน';
-                  }
-                  return null;
-                },
+                validator: _validatePassword,
               ),
               const SizedBox(height: 8),
 
@@ -127,39 +121,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Checkbox(
                     value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                      });
-                    },
+                    onChanged: (v) => setState(() => _rememberMe = v ?? false),
                   ),
-                  const Text('จดจำฉันไว้'),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: หน้าลืมรหัสผ่าน
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ฟีเจอร์ลืมรหัสผ่าน')),
-                      );
-                    },
-                    child: const Text('ลืมรหัสผ่าน?'),
-                  ),
+                  const SizedBox(width: 8),
+                  const Text('จำฉันไว้'),
                 ],
               ),
               const SizedBox(height: 16),
 
               // ปุ่มเข้าสู่ระบบ
               ElevatedButton(
-                onPressed: _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  'เข้าสู่ระบบ',
-                  style: TextStyle(fontSize: 18),
-                ),
+                onPressed: _isLoading ? null : _handleLogin,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('เข้าสู่ระบบ'),
               ),
               const SizedBox(height: 16),
 
@@ -167,12 +149,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('ยังไม่มีบัญชี? '),
+                  const Text('ยังไม่เป็นสมาชิก?'),
                   TextButton(
-                    onPressed: () {
-                      // Navigation แบบ Named Route
-                      Navigator.pushNamed(context, '/register');
-                    },
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/register'),
                     child: const Text('ลงทะเบียน'),
                   ),
                 ],

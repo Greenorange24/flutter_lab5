@@ -10,13 +10,14 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   // สร้าง GlobalKey สำหรับ Form
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers สำหรับ TextFormField
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+  final _phoneController = TextEditingController();
+
   // State สำหรับ Show/Hide Password
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -28,6 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -55,6 +57,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
+  String? _phoneValidator(String? v) {
+    if (v == null || v.trim().isEmpty) return 'กรุณาใส่เบอร์โทรศัพท์';
+    final digits = v.replaceAll(RegExp(r'\D'), '');
+    if (!RegExp(r'^0\d{8,9}$').hasMatch(digits))
+      return 'รูปแบบเบอร์โทรไม่ถูกต้อง';
+    return null;
+  }
+
   // ฟังก์ชันจัดการการลงทะเบียน
   void _handleRegister() {
     // ตรวจสอบ Form ว่าผ่าน Validation หรือไม่
@@ -66,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      
+
       // Navigation ไปหน้า Login (แบบ Named Route)
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -83,31 +93,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey, // ผูก GlobalKey กับ Form
+          autovalidateMode: AutovalidateMode.always, // validate แบบ real-time
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ไอคอนด้านบน
-              const Icon(
-                Icons.person_add,
-                size: 80,
-                color: Colors.indigo,
-              ),
+              const Icon(Icons.person_add, size: 80, color: Colors.indigo),
               const SizedBox(height: 32),
 
               // ชื่อ
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'ชื่อ-นามสกุล',
-                  prefixIcon: Icon(Icons.person),
+                  labelText: 'ชื่อ',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'กรุณากรอกชื่อ';
-                  }
-                  return null;
-                },
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อ' : null,
               ),
               const SizedBox(height: 16),
 
@@ -117,7 +119,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'อีเมล',
-                  prefixIcon: Icon(Icons.email),
                   border: OutlineInputBorder(),
                 ),
                 validator: _validateEmail,
@@ -130,88 +131,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'รหัสผ่าน',
-                  prefixIcon: const Icon(Icons.lock),
                   border: const OutlineInputBorder(),
-                  // ปุ่ม Show/Hide Password
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword 
-                          ? Icons.visibility_off 
-                          : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
                 validator: _validatePassword,
               ),
               const SizedBox(height: 16),
 
-              // ยืนยันรหัสผ่าน
+              // Confirm Password
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: 'ยืนยันรหัสผ่าน',
-                  prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword 
-                          ? Icons.visibility_off 
-                          : Icons.visibility,
+                      _obscureConfirmPassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
+                    onPressed: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                    ),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'กรุณายืนยันรหัสผ่าน';
-                  }
-                  // ตรวจสอบว่าตรงกับรหัสผ่านหรือไม่
-                  if (value != _passwordController.text) {
-                    return 'รหัสผ่านไม่ตรงกัน';
-                  }
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'กรุณายืนยันรหัสผ่าน';
+                  if (v != _passwordController.text) return 'รหัสผ่านไม่ตรงกัน';
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
-
-              // ปุ่มลงทะเบียน
-              ElevatedButton(
-                onPressed: _handleRegister,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  'ลงทะเบียน',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
               const SizedBox(height: 16),
 
-              // ลิงก์ไปหน้า Login
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('มีบัญชีอยู่แล้ว? '),
-                  TextButton(
-                    onPressed: () {
-                      // Navigation แบบ Named Route
-                      Navigator.pushNamed(context, '/login');
-                    },
-                    child: const Text('เข้าสู่ระบบ'),
-                  ),
-                ],
+              // เบอร์โทรศัพท์
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'เบอร์โทรศัพท์',
+                  border: OutlineInputBorder(),
+                ),
+                validator: _phoneValidator,
+              ),
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: _handleRegister,
+                child: const Text('ลงทะเบียน'),
               ),
             ],
           ),
